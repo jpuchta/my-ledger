@@ -78,7 +78,7 @@ The data model defines two roles from day one:
 - **Owner** — full read/write access to a ledger. Creates the ledger, owns its data, and is the only role that can mutate transactions, categories, CSV schemas, or any other ledger content.
 - **Viewer** — read-only access to a ledger.
 
-**MVP scope: only the Owner role is reachable.** There is no invitation flow, no second user on any ledger, and no UI to assign a Viewer. The Viewer role exists in the data model and authorization layer as groundwork for the v2+ couple-sharing direction, so v2 is a feature flip rather than a schema migration.
+**MVP scope: only the Owner role is reachable.** There is no invitation flow, no second user on any ledger, and no UI to assign a Viewer. The Viewer role exists in the data model and authorization layer as groundwork for the v2+ couple-sharing direction.
 
 Unauthenticated requests to ledger-bearing routes are rejected and the user is routed to sign-in.
 
@@ -96,7 +96,7 @@ Unauthenticated requests to ledger-bearing routes are rejected and the user is r
 
 - **No transaction loss.** A transaction the user enters or imports never silently disappears. Any failure surface (validation error, import failure, network error) preserves the user's pending input or import payload until they explicitly discard or retry.
 - **Privacy of financial data.** Transaction content (amount, date, description, comment, category, account) is never sent to third-party analytics, telemetry, advertising, or aggregator services. The data lives where the user's ledger lives, and nowhere else.
-- **Category / account deletion does not silently mutate historical data.** Deletion is implemented as soft-delete (FR-010, FR-014): a deleted category or account is hidden from pickers but historical transactions retain their reference to it (read-only). Historical transactions never silently become uncategorized, change account assignment, or disappear because of a category- or account-management action.
+- **Category / account deletion does not silently mutate historical data.** Deletion is implemented as archivisation (FR-010, FR-014): a deleted category or account is hidden from pickers but historical transactions retain their reference to it (read-only). Historical transactions never silently become uncategorized, change account assignment, or disappear because of a category- or account-management action.
 - **Monthly report determinism (soft).** Running the export for the same month twice on unchanged data produces the same file.
 
 ## User Stories
@@ -139,16 +139,16 @@ Unauthenticated requests to ledger-bearing routes are rejected and the user is r
   > Socrates: Counter-argument considered: "Visual greying creates a 'second-class transaction' signal that breaks the mental model that Internal is just-another-category." Resolution: kept; the greying matches Internal's role as the only category with a system-wide rule (excluded from reports), and the visual treatment communicates that.
 
 ### Categories
-- FR-010: The household bookkeeper can rename or soft-delete a category via a "Manage categories…" dialog accessible from the inline category picker (which appears in the ledger row picker and in the Add/Edit transaction form). The dialog lists all (non-soft-deleted) categories with rename and soft-delete actions. A soft-deleted category is hidden from the picker and from the dialog, but historical transactions retain their reference to it (read-only). It cannot be assigned to new transactions. Priority: must-have
-  > Socrates: Counter-argument considered: "Soft-delete is a half-measure: users won't understand that the category is 'hidden' but still appears in old transactions." Resolution: kept; soft-delete is the right semantics for a finance ledger — history is sacred. Surface revised: no dedicated Categories page (FR-008/FR-009 dropped); rename and soft-delete live in a Manage-categories dialog reachable from the inline picker.
-- FR-011: One category ("Internal") is present by default in every new ledger and cannot be renamed or soft-deleted. It is system-load-bearing: the rule that excludes Internal transactions from reports (see Reports section) depends on it. Priority: must-have
+- FR-010: The household bookkeeper can rename or archive a category via a "Manage categories…" dialog accessible from the inline category picker (which appears in the ledger row picker and in the Add/Edit transaction form). The dialog lists all (non-archived) categories with rename and archive actions. An archived category is hidden from the picker and from the dialog, but historical transactions retain their reference to it (read-only). It cannot be assigned to new transactions. Priority: must-have
+  > Socrates: Counter-argument considered: "Archive is a half-measure: users won't understand that the category is 'hidden' but still appears in old transactions." Resolution: kept; archive is the right semantics for a finance ledger — history is sacred. Surface revised: no dedicated Categories page (FR-008/FR-009 dropped); rename and archive live in a Manage-categories dialog reachable from the inline picker.
+- FR-011: One category ("Internal") is present by default in every new ledger and cannot be renamed or archived. It is system-load-bearing: the rule that excludes Internal transactions from reports (see Reports section) depends on it. Priority: must-have
   > Socrates: Counter-argument considered: "Pre-seeding categories tempts users into the lazy-catch-all habit ('Other') and most personal-finance tools regret pre-seeding." Resolution: revised — dropped the "Other" predefined category; users build their own taxonomy from zero. "Internal" stays because the report-exclusion rule depends on it.
 
 (FR-008 and FR-009 were dropped during the Socrates round: no dedicated Categories page; categories are added via on-the-fly creation in the transaction form and CSV import, and managed via the Manage-categories dialog described in FR-010.)
 
 ### Accounts
-- FR-014: The household bookkeeper can rename or soft-delete an account via a "Manage accounts…" dialog accessible from the inline account picker (which appears in the Add/Edit transaction form and in the CSV-import account picker). The dialog lists all (non-soft-deleted) accounts with rename and soft-delete actions. A soft-deleted account is hidden from the picker and from the dialog, but historical transactions retain their reference to it (read-only). It cannot be assigned to new transactions and cannot be used as a CSV-import target. Priority: must-have
-  > Socrates: Same shape as FR-010 (soft-delete vs block/migrate). Resolution: kept soft-delete; surface revised to the Manage-accounts dialog reachable from the inline picker. By parity with categories, no dedicated Accounts page (FR-012/FR-013 dropped).
+- FR-014: The household bookkeeper can rename or archive an account via a "Manage accounts…" dialog accessible from the inline account picker (which appears in the Add/Edit transaction form and in the CSV-import account picker). The dialog lists all (non-archived) accounts with rename and archive actions. An archived account is hidden from the picker and from the dialog, but historical transactions retain their reference to it (read-only). It cannot be assigned to new transactions and cannot be used as a CSV-import target. Priority: must-have
+  > Socrates: Same shape as FR-010 (archive vs block/migrate). Resolution: kept archive; surface revised to the Manage-accounts dialog reachable from the inline picker. By parity with categories, no dedicated Accounts page (FR-012/FR-013 dropped).
 
 (FR-012 and FR-013 were dropped during the Socrates round: no dedicated Accounts page; accounts are added via on-the-fly creation in the transaction form and CSV import, and managed via the Manage-accounts dialog described in FR-014.)
 
@@ -165,7 +165,7 @@ Unauthenticated requests to ledger-bearing routes are rejected and the user is r
   > Socrates: Counter-argument considered: "A 'default category for this import' field would collapse 95% of post-import categorization into one decision." Resolution: kept; per-row categorization gives full control and trains the user's taxonomy organically. The inline category picker (FR-006) keeps post-import categorization fast.
 - FR-023: At CSV import, the application flags any row whose (date + amount + account) exactly matches an existing transaction or another row in the same import batch as a duplicate and auto-skips it. The post-import review panel lists every skipped row alongside the matching reference transaction and provides a per-row "force-import this row" action that reinstates the skipped row as a normal transaction. Priority: must-have
   > Socrates: Counter-argument considered: "Exact (date + amount + account) match is brittle — banks sometimes post the same transaction with a 1-day date adjustment, and the user will see false negatives." Resolution: kept; exact match is a v1 floor; relaxation to a date-window-tolerant match is a v1.5 enhancement.
-- FR-024: At CSV import, the application identifies candidate transfer pairs as any two transactions on two different (non-soft-deleted) accounts whose amounts are +X and −X for some X > 0 and whose dates are within five calendar days of each other; matches may pair a new import row with an existing ledger row or two rows within the same import batch. The application auto-tags both halves of every candidate pair with the category "Internal". The post-import review panel lists every auto-tagged pair with a per-pair "reverse this pair" action that untags both back to no category. Priority: must-have
+- FR-024: At CSV import, the application identifies candidate transfer pairs as any two transactions on two different (non-archived) accounts whose amounts are +X and −X for some X > 0 and whose dates are within five calendar days of each other; matches may pair a new import row with an existing ledger row or two rows within the same import batch. The application auto-tags both halves of every candidate pair with the category "Internal". The post-import review panel lists every auto-tagged pair with a per-pair "reverse this pair" action that untags both back to no category. Priority: must-have
   > Socrates: Counter-argument considered: "Opposite-sign + cross-account + 5-day window can produce false positives (e.g., a vendor refund landing on a different account around the same time as an unrelated debit). Auto-tagging may silently miscategorize." Resolution: kept; the post-import review panel surfaces every pair the rule found with a per-pair reverse action and full traceability, so misjudgments are recoverable. The cross-account + opposite-sign constraint filters most false positives in normal usage.
 
 ### Manual-entry reconciliation
@@ -184,7 +184,7 @@ Unauthenticated requests to ledger-bearing routes are rejected and the user is r
 
 **Rule (one sentence):** When a new transaction enters the ledger — whether via CSV import or manual entry — the application reconciles it against the existing ledger and against other transactions in the same import batch, treating rows that exactly match (date + amount + account) of an existing transaction as candidate duplicates, and rows whose opposite-signed amount matches another transaction on a different account within a 5-calendar-day window as candidate transfer pairs.
 
-The rule consumes the existing ledger (all non-soft-deleted transactions) and the new transaction(s) being submitted. For each new transaction the rule yields one of three outcomes: a normal accept; a duplicate flag (auto-skipped at CSV import, blocked-pending-confirmation at manual add); or a transfer-pair flag (both halves auto-tagged "Internal" at CSV import, prompt-with-default at manual add).
+The rule consumes the existing ledger (all non-archived transactions) and the new transaction(s) being submitted. For each new transaction the rule yields one of three outcomes: a normal accept; a duplicate flag (auto-skipped at CSV import, blocked-pending-confirmation at manual add); or a transfer-pair flag (both halves auto-tagged "Internal" at CSV import, prompt-with-default at manual add).
 
 The user encounters the rule asymmetrically. During CSV import they see a post-import review panel listing what the application did — every skipped duplicate and every auto-tagged transfer pair — with per-row reverse actions (force-import the skipped row, untag the pair). During manual entry the form warns the user before save when the rule fires, naming the matching existing transaction and offering "save anyway / cancel" (for a duplicate) or "save and tag both as Internal / save as-is" (for a transfer-pair candidate).
 
@@ -194,7 +194,7 @@ Every decision the rule made is reversible: a force-imported skip becomes a norm
 
 - Transaction content (amount, date, description, comment, category, account) is never transmitted to any third party not directly serving the user's own ledger. No analytics, advertising, or aggregator services receive transaction data.
 - Transaction data persisted at rest is protected against casual operator-side inspection: a database backup or storage snapshot that leaves the deployment environment is not readable as cleartext personally-identifiable transaction content.
-- A transaction the user has deleted remains recoverable through a user-facing surface for at least a short window after the delete commits; the product does not hard-delete a transaction on the first user action.
+- A transaction the user has deleted remains recoverable through a user-facing surface for at least a short window after the delete commits; the product does not permamently remove a transaction on the first user action.
 - A successfully committed transaction (entered manually or imported via CSV) survives a server restart, a browser refresh, and a user-session expiry without loss.
 - Amount values are displayed and parsed using two decimal places with the user's locale conventions (comma or period as the decimal separator). CSV import accepts dates expressed in the user's locale conventions, covering at minimum the common patterns DD.MM.YYYY, YYYY-MM-DD, and MM/DD/YYYY.
 
@@ -204,7 +204,7 @@ The MVP explicitly does NOT do any of the following. Each is recorded so it cann
 
 - **Importing non-CSV formats** (PDF, XLSX, OFX, QIF). CSV is the only supported import format. (Seed-explicit.)
 - **Maintaining account balances or running totals.** The product tracks individual transactions; it does not compute, reconcile, or display per-account balances. (Seed-explicit.)
-- **Migrating historical data when the category taxonomy changes.** Soft-delete and rename do not retroactively reshape past transactions; categories are decisions captured at the moment of categorization. (Seed-explicit.)
+- **Migrating historical data when the category taxonomy changes.** Archive and rename do not retroactively reshape past transactions; categories are decisions captured at the moment of categorization. (Seed-explicit.)
 - **Automatic categorization** (ML, NLP, or rule-based on description). The user categorizes every transaction manually. Category suggestions, learning, and pre-population are out of MVP. (Seed-explicit.)
 - **Native mobile application.** Web only for v1. (Seed-explicit.)
 - **Bank API integrations, aggregator integrations, or screen-scraping.** CSV import is the only channel by which transactions enter the ledger. Aligns with the user's privacy stance (data stays under user control; no credentials surrendered to third parties).
@@ -219,7 +219,7 @@ The MVP explicitly does NOT do any of the following. Each is recorded so it cann
 (Working list — accumulates through phases. Final list lands in PRD.)
 
 1. **What is the schema of the monthly-report CSV?** — Owner: user. Must be defined before MVP ships (FR-021 depends on it). Candidate columns: date, account, category, amount, description, comment — but the exact column order, header names, decimal/date formats, and whether to include a header row are TBD.
-2. **What is the undo window for deleted transactions, and through what surface does the user recover?** — Owner: user. The NFR commits to "at least a short window" of recoverability and forbids hard-delete on first action, but does not pin the duration (a transient undo banner valid for ~30 seconds? a "recently deleted" view with a longer retention?). Resolve before or during MVP build.
+2. **What is the undo window for deleted transactions, and through what surface does the user recover?** — Owner: user. The NFR commits to "at least a short window" of recoverability and forbids permament removal on first action, but does not pin the duration (a transient undo banner valid for ~30 seconds? a "recently deleted" view with a longer retention?). Resolve before or during MVP build.
 
 ## Timeline acknowledgment
 
