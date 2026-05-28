@@ -1,0 +1,66 @@
+# Dependabot configuration for my-ledger.
+#
+# Cooldown rationale: a 7-day default delay on npm version updates buys a
+# week of community observation before a freshly-published release rolls
+# into a PR here. That window is the simplest mitigation against
+# supply-chain attacks (compromised maintainer accounts, typosquatting,
+# malicious post-install scripts). Security updates from the GitHub
+# Advisory Database are explicitly NOT subject to cooldown — those still
+# arrive immediately.
+#
+# Reference: https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#cooldown-
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Warsaw"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+          - "prettier-plugin-tailwindcss"
+          - "tw-animate-css"
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+          - "typescript-eslint"
+      supabase:
+        patterns:
+          - "@supabase/*"
+          - "supabase"
+      cloudflare:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Warsaw"
+    open-pull-requests-limit: 3
