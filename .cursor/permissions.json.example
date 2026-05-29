@@ -1,0 +1,15 @@
+{
+  "terminalAllowlist": [
+    "npm",
+    "npx",
+    "node",
+    "git add",
+    "git commit",
+    "git diff",
+    "git log",
+    "git status",
+    "git branch",
+    "git checkout",
+    "git stash"
+  ]
+}

@@ -1,0 +1,28 @@
+# Secrets and environment (agent Read tool + indexing; see also .cursor/cli.json)
+.env
+.env.local
+.env.production
+.env.*.local
+.dev.vars
+.wrangler/
+
+# Supabase local secrets (see supabase/.gitignore)
+supabase/.env.keys
+supabase/.env.local
+
+# Keys, certs, credentials files
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+*.crt
+credentials.json
+secrets.json
+**/secrets.*
+*-credentials.json
+service-account*.json
+
+# Lockfiles with resolved URLs (optional; large and rarely needed by agent)
+package-lock.json
